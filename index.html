@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TukA1 | 数字液态矩阵</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body {
+  background: #030705;
+  padding: 40px 16px;
+  position: relative;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 5, 0.85);
+  z-index: 1;
+  pointer-events: none;
+}
+body.app-ready {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========== Toast提示 ========== */
+#toastBox {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  z-index: 1000001;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+#toastBox.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast-content {
+  background: rgba(10,14,12,0.95);
+  border: 1px solid rgba(60,255,136,0.3);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* ========== 重置验证按钮 ========== */
+#resetVerify {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 99998;
+  background: rgba(10,14,12,0.8);
+  border: 1px solid rgba(60,255,136,0.2);
+  color: rgba(56,255,136,0.6);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  touch-action: manipulation;
+}
+#resetVerify:hover {
+  border-color: rgba(60,255,136,0.5);
+  color: rgba(56,255,136,0.9);
+}
+
+/* ========== 授权码验证弹窗 ========== */
+#verifyModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.94);
+  z-index: 999999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  transition: opacity 0.3s ease;
+}
+.verify-box {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(10,14,12,0.95);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(60,255,136,0.3);
+  border-radius: 20px;
+  padding: 26px;
+  animation: modalGlow 3s linear infinite;
+}
+@keyframes modalGlow {
+  0% { box-shadow: 0 0 12px rgba(60,255,136,0.2); }
+  50% { box-shadow: 0 0 30px rgba(60,255,136,0.5); }
+  100% { box-shadow: 0 0 12px rgba(60,255,136,0.2); }
+}
+.verify-title {
+  font-size: 18px;
+  color: #38ff88;
+  margin-bottom: 18px;
+  text-align: center;
+}
+.verify-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(60,255,136,0.2);
+  border-radius: 10px;
+  color: #fff;
+  margin-bottom: 14px;
+  outline: none;
+  font-size: 14px;
+}
+.verify-input:focus {
+  border-color: rgba(60,255,136,0.6);
+}
+.verify-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(60,255,136,0.15);
+  border: 1px solid rgba(60,255,136,0.4);
+  border-radius: 10px;
+  color: #38ff88;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+  margin-bottom: 10px;
+  touch-action: manipulation;
+}
+.verify-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.verify-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  background: rgba(60,255,136,0.25);
+}
+.tutorial-btn {
+  width: 100%;
+  padding: 9px;
+  background: transparent;
+  border: 1px dashed rgba(60,255,136,0.3);
+  border-radius: 8px;
+  color: rgba(56,255,136,0.7);
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 4px;
+  touch-action: manipulation;
+}
+.verify-tip {
+  font-size: 11px;
+  color: #888;
+  margin-top: 12px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ========== 教程弹窗 ========== */
+#tutorialModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 1000000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.tutorial-box {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(10,14,12,0.98);
+  border: 1px solid rgba(60,255,136,0.3);
+  border-radius: 16px;
+  padding: 22px;
+  color: #fff;
+}
+.tutorial-title {
+  font-size: 16px;
+  color: #38ff88;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.tutorial-step {
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 2px solid rgba(60,255,136,0.5);
+}
+.tutorial-close {
+  width: 100%;
+  padding: 10px;
+  margin-top: 12px;
+  background: rgba(60,255,136,0.15);
+  border: 1px solid rgba(60,255,136,0.4);
+  border-radius: 8px;
+  color: #38ff88;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ========== 页面基础样式 ========== */
+.scroll-shadow-top, .scroll-shadow-bottom {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  z-index: 9997;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.scroll-shadow-top {
+  top: 0;
+  background: linear-gradient(to bottom, #030705, transparent);
+}
+.scroll-shadow-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, #030705, transparent);
+}
+#particleCanvas {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+#fireCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99998;
+  pointer-events: none;
+}
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.splash-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-title {
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  margin-bottom: 40px;
+  animation: titleGlow 2.2s infinite ease-in-out, rainbowFlash 3s linear infinite;
+  text-align: center;
+}
+@keyframes titleGlow {
+  0%,100% { text-shadow: 0 0 20px rgba(40,255,120,0.4); }
+  50% { text-shadow: 0 0 35px rgba(40,255,120,0.7), 0 0 50px rgba(0,180,80,0.3); }
+}
+@keyframes rainbowFlash {
+  0% { color: #ff3366; }
+  20% { color: #ffcc00; }
+  40% { color: #33ff66; }
+  60% { color: #00ccff; }
+  80% { color: #9966ff; }
+  100% { color: #ff3366; }
+}
+.flash-text { animation: rainbowFlash 3s linear infinite; }
+.flash-text-slow { animation: rainbowFlash 5s linear infinite; }
+.flash-text-fast { animation: rainbowFlash 1.5s linear infinite; }
+.enter-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 12px 35px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 2px;
+  border-radius: 30px;
+  cursor: pointer;
+  animation: pulseGlow 2.2s infinite ease-in-out;
+  touch-action: manipulation;
+}
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 15px rgba(255,255,255,0.05); }
+  50% { box-shadow: 0 0 30px rgba(255,255,255,0.18); }
+  100% { box-shadow: 0 0 15px rgba(255,255,255,0.05); }
+}
+
+.type-wrap {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid #38ff88;
+  animation: blinkCursor 0.8s infinite;
+}
+@keyframes blinkCursor {
+  0%,100% { border-color: #38ff88; }
+  50% { border-color: transparent; }
+}
+
+.live-clock {
+  font-size: 14px;
+  font-family: monospace;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(40,255,120,0.22);
+  color: #38ff88;
+  background: rgba(40,255,120,0.08);
+}
+.panel-title {
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 14px;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 2.2;
+  color: rgba(255,255,255,0.75);
+  width: 100%;
+}
+.status-row {
+  display: flex;
+  justify-content: space-between;
+}
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ff66;
+  margin-right: 6px;
+  animation: blink 1.5s infinite;
+}
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.quote-wrap {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+}
+.quote-text {
+  flex: 1;
+  color: rgba(56,255,136,0.85);
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.6;
+  opacity: 0;
+  transition: opacity 0.4s ease-in-out;
+}
+.quote-text.show { opacity: 1; }
+.refresh-quote-btn {
+  padding: 4px 8px;
+  background: rgba(40,255,120,0.12);
+  border: 1px solid rgba(40,255,120,0.28);
+  border-radius: 6px;
+  color: #38ff88;
+  font-size: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+.run-time {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+  color: rgba(56,255,136,0.85);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.radio-wrap {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+}
+.radio-input-area {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.radio-input {
+  flex: 1;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(40,255,120,0.25);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  outline: none;
+}
+.radio-search-btn {
+  padding: 7px 12px;
+  background: rgba(40,255,120,0.15);
+  border: 1px solid rgba(40,255,120,0.3);
+  border-radius: 8px;
+  color: #38ff88;
+  font-size: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+.radio-result-list {
+  max-height: 120px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+.radio-item {
+  padding: 6px 4px;
+  border-bottom: 1px dashed rgba(255,255,255,0.1);
+  cursor: pointer;
+  font-size: 11px;
+  color: rgba(255,255,255,0.8);
+  touch-action: manipulation;
+  transition: 0.2s;
+}
+.radio-item:last-child { border-bottom: none; }
+.radio-item:hover { color: #38ff88; }
+.radio-item.playing { color: #38ff88; font-weight: 500; }
+.radio-player {
+  width: 100%;
+  margin-top: 8px;
+  height: 32px;
+  filter: invert(1) hue-rotate(90deg) brightness(0.8);
+}
+
+.image-wrap {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+}
+.refresh-image-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(40,255,120,0.15);
+  border: 1px solid rgba(40,255,120,0.3);
+  border-radius: 8px;
+  color: #38ff88;
+  font-size: 12px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  touch-action: manipulation;
+}
+.img-result-box {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.img-result-box img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(40,255,120,0.2);
+  cursor: pointer;
+  opacity: 0.85;
+  transition: 0.2s;
+  touch-action: manipulation;
+}
+.img-result-box img:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.tool-wrap {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255,255,255,0.1);
+}
+.tool-title {
+  font-size:13px;
+  margin-bottom:8px;
+  color:#38ff88;
+}
+.tool-input {
+  width:100%;
+  padding:7px 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(40,255,120,0.25);
+  border-radius: 8px;
+  color:#fff;
+  margin-bottom:8px;
+  outline:none;
+  font-size: 12px;
+}
+.tool-btn {
+  padding:6px 10px;
+  background: rgba(40,255,120,0.15);
+  border: 1px solid rgba(40,255,120,0.3);
+  border-radius: 6px;
+  color:#38ff88;
+  cursor:pointer;
+  touch-action: manipulation;
+  font-size: 12px;
+}
+.tool-preview {
+  margin-top:8px;
+  min-height:80px;
+  background:rgba(0,0,0,0.3);
+  border-radius:6px;
+  padding:8px;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+}
+.tool-preview img { max-width:120px; }
+.tool-preview a {
+  color: #38ff88;
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.app-container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+  opacity: 0;
+  filter: blur(20px);
+  transform: scale(0.95);
+  transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+body.app-ready .app-container {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+@media (min-width: 768px) {
+  .main-grid { grid-template-columns: 320px 1fr; }
+  .img-result-box { grid-template-columns: repeat(6, 1fr); }
+}
+
+.glass-card {
+  background: rgba(8, 8, 12, 0.85);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 30px 24px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.85);
+  transition: border 0.4s ease, box-shadow 0.4s ease;
+}
+.glass-card:hover {
+  border: 1px solid rgba(60,255,136,0.7);
+  animation: cardNeon 2.2s infinite linear;
+}
+@keyframes cardNeon {
+  0% { box-shadow: 0 0 12px rgba(60,255,136,0.15), 0 40px 80px rgba(0,0,0,0.85); }
+  50% { box-shadow: 0 0 32px rgba(60,255,136,0.45), 0 40px 80px rgba(0,0,0,0.85); }
+  100% { box-shadow: 0 0 12px rgba(60,255,136,0.15), 0 40px 80px rgba(0,0,0,0.85); }
+}
+
+.profile-section { text-align: center; }
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.15);
+  margin: 0 auto 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+}
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #fff;
+}
+.subtitle {
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
+  margin-bottom: 25px;
+}
+.links-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.link-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 14px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: 0.3s;
+  touch-action: manipulation;
+}
+.link-card:hover {
+  background: rgba(255,255,255,0.05);
+  transform: translateY(-2px);
+  border: 1px solid rgba(60,255,136,0.5);
+  box-shadow: 0 0 14px rgba(60,255,136,0.2);
+}
+.account-tag {
+  font-size: 12px;
+  background: rgba(255,255,255,0.08);
+  padding: 3px 10px;
+  border-radius: 20px;
+  color: rgba(255,255,255,0.7);
+}
+</style>
+</head>
+<body>
+
+<!-- Toast提示容器 -->
+<div id="toastBox">
+  <div class="toast-content" id="toastText"></div>
+</div>
+
+<!-- 重置验证按钮 -->
+<div id="resetVerify">重置验证</div>
+
+<!-- 授权码验证弹窗 -->
+<div id="verifyModal">
+  <div class="verify-box">
+    <div class="verify-title flash-text">🔐 访问授权验证</div>
+    <input class="verify-input" id="smtpPwd" type="password" placeholder="QQ邮箱SMTP授权码">
+    <input class="verify-input" id="receiveMail" placeholder="接收授权码的邮箱">
+    <button class="verify-btn" id="sendBtn">获取邮箱授权码</button>
+    <input class="verify-input" id="codeInput" placeholder="请输入收到的授权码" maxlength="6">
+    <button class="verify-btn" id="checkBtn">确认解锁全站</button>
+    <button class="tutorial-btn" id="openTutorial">📖 如何获取SMTP授权码</button>
+    <div class="verify-tip">授权码60秒内有效，验证通过永久解锁</div>
+  </div>
+</div>
+
+<!-- 教程弹窗 -->
+<div id="tutorialModal">
+  <div class="tutorial-box">
+    <div class="tutorial-title">QQ邮箱SMTP授权码获取教程</div>
+    <div class="tutorial-step">1. 手机浏览器打开QQ邮箱网页版 mail.qq.com 并登录</div>
+    <div class="tutorial-step">2. 点击页面底部「切换至标准版」进入完整界面</div>
+    <div class="tutorial-step">3. 顶部点击「设置」→ 切换到「账户」标签</div>
+    <div class="tutorial-step">4. 下滑找到「POP3/IMAP/SMTP服务」，点击开启POP3服务</div>
+    <div class="tutorial-step">5. 按提示发送短信完成验证，生成16位授权码</div>
+    <div class="tutorial-step">6. 复制授权码，粘贴到上方输入框即可使用</div>
+    <button class="tutorial-close" id="closeTutorial">我知道了</button>
+  </div>
+</div>
+
+<!-- 页面装饰 -->
+<div class="scroll-shadow-top" id="shadowTop"></div>
+<div class="scroll-shadow-bottom" id="shadowBottom"></div>
+<canvas id="particleCanvas"></canvas>
+<canvas id="fireCanvas"></canvas>
+
+<!-- 启动页 -->
+<div class="splash-screen" id="splashScreen">
+  <div>
+    <div class="splash-title flash-text">TUKA1</div>
+    <button class="enter-btn" onclick="exitSplash()">ENTER SYSTEM</button>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div class="app-container">
+  <div class="main-grid">
+    <!-- 左侧个人卡片 -->
+    <div class="glass-card profile-section">
+      <div class="avatar">✨</div>
+      <h1 class="flash-text-slow type-wrap" id="profileType">TukA1</h1>
+      <div class="subtitle type-wrap" id="subType">DIGITAL LIQUID MATRIX</div>
+      <div class="links-stack">
+        <div class="link-card"><span>💬 微信</span><span class="account-tag">tukulia1</span></div>
+        <div class="link-card"><span>🎵 抖音</span><span class="account-tag">tukulia1xh</span></div>
+        <div class="link-card"><span>🐧 QQ</span><span class="account-tag">918750160</span></div>
+        <a class="link-card" href="javascript:void(0)" onclick="joinQQGroup()">
+          <span>👥 官方QQ群</span><span class="account-tag">671761013</span>
+        </a>
+        <div class="link-card"><span>🌐 主页</span><span class="account-tag">tuka1.qzz.io</span></div>
+      </div>
+    </div>
+
+    <!-- 右侧功能区 -->
+    <div class="glass-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="panel-title flash-text-fast type-wrap" id="panelType"><span>🌐</span> VISITOR INFO</div>
+        <div class="live-clock" id="hexClock">00:00:00</div>
+      </div>
+      <div class="status-box">
+        <div class="status-row"><span><span class="status-dot"></span>站点状态</span><span>ONLINE</span></div>
+        <div class="status-row"><span>设备终端</span><span id="deviceInfo"></span></div>
+        <div class="status-row"><span>站点域名</span><span>tuka1.qzz.io</span></div>
+
+        <!-- 一言 -->
+        <div class="quote-wrap">
+          <div class="quote-text type-wrap" id="quoteBox">「正在加载语录...」</div>
+          <button class="refresh-quote-btn" id="refreshQuoteBtn">刷新</button>
+        </div>
+
+        <!-- 运行时间 -->
+        <div class="run-time" id="runTimeBox"></div>
+
+        <!-- 电台（优化版） -->
+        <div class="radio-wrap">
+          <div class="radio-input-area">
+            <input class="radio-input" id="radioKeyword" placeholder="输入电台关键词 例：音乐">
+            <button class="radio-search-btn" id="radioSearchBtn">搜索</button>
+          </div>
+          <div class="radio-result-list" id="radioResultList">
+            <div style="color:#aaa">搜索关键词，点击电台即可播放</div>
+          </div>
+          <audio class="radio-player" id="radioPlayer" controls preload="none">
+        </div>
+
+        <!-- 壁纸 -->
+        <div class="image-wrap">
+          <button class="refresh-image-btn" id="refreshImageBtn">刷新风景壁纸</button>
+          <div class="img-result-box" id="imgResultBox"></div>
+        </div>
+
+        <!-- 二维码工具 -->
+        <div class="tool-wrap">
+          <div class="tool-title">📱 二维码生成器</div>
+          <input class="tool-input" id="qrInput" placeholder="输入文字/链接">
+          <button class="tool-btn" id="qrGenBtn">生成</button>
+          <div class="tool-preview" id="qrPreview"></div>
+        </div>
+
+        <!-- 图片压缩 -->
+        <div class="tool-wrap">
+          <div class="tool-title">🖼️ 本地图片压缩</div>
+          <input class="tool-input" type="file" accept="image/*" id="compressFile">
+          <div class="tool-preview" id="compressPreview"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 全局配置 ==========
+const CONFIG = {
+  emailApi: "https://api.hongci886.top/api/email.php",
+  fromName: "TukA1站点授权系统",
+  mailTitle: "您的站点访问授权码",
+  cooldown: 120
+};
+
+// ========== Toast提示函数 ==========
+const toastBox = document.getElementById('toastBox');
+const toastText = document.getElementById('toastText');
+let toastTimer = null;
+
+function showToast(msg, duration = 2500) {
+  toastText.textContent = msg;
+  toastBox.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastBox.classList.remove('show');
+  }, duration);
+}
+
+// ========== 重置验证功能 ==========
+document.getElementById('resetVerify').onclick = function() {
+  localStorage.removeItem('siteVerifyPass');
+  showToast('已重置验证状态，页面即将刷新');
+  setTimeout(() => location.reload(), 1000);
+};
+
+// ========== 验证初始化（零闪烁） ==========
+const verifyModal = document.getElementById('verifyModal');
+const isVerified = localStorage.getItem("siteVerifyPass") === "true";
+
+if(!isVerified){
+  verifyModal.style.display = "flex";
+}
+
+// ========== 防广告屏蔽：纯样式守护 ==========
+(function protectModal(){
+  if(isVerified) return;
+
+  setInterval(() => {
+    const style = getComputedStyle(verifyModal);
+    if(
+      style.display === 'none' ||
+      style.opacity < 0.1 ||
+      parseInt(style.left) < -1000 ||
+      parseInt(style.zIndex) < 99999
+    ){
+      verifyModal.style.display = 'flex';
+      verifyModal.style.opacity = '1';
+      verifyModal.style.left = '0';
+      verifyModal.style.top = '0';
+      verifyModal.style.zIndex = '999999';
+    }
+  }, 500);
+})();
+
+// ========== 授权码核心逻辑 ==========
+const sendBtn = document.getElementById('sendBtn');
+const checkBtn = document.getElementById('checkBtn');
+const smtpPwdInput = document.getElementById('smtpPwd');
+const receiveMailInput = document.getElementById('receiveMail');
+const codeInput = document.getElementById('codeInput');
+const tutorialBtn = document.getElementById('openTutorial');
+const tutorialModal = document.getElementById('tutorialModal');
+const closeTutorialBtn = document.getElementById('closeTutorial');
+
+let realCode = "";
+let coolDownNum = 0;
+let timer = null;
+let isSending = false;
+
+tutorialBtn.onclick = () => tutorialModal.style.display = "flex";
+closeTutorialBtn.onclick = () => tutorialModal.style.display = "none";
+tutorialModal.onclick = (e) => {
+  if(e.target === tutorialModal) tutorialModal.style.display = "none";
+};
+
+function updateCountText() {
+  sendBtn.textContent = `剩余 ${coolDownNum} 秒可重发`;
+}
+function startCountdown(){
+  if(timer) clearInterval(timer);
+  coolDownNum = CONFIG.cooldown;
+  sendBtn.disabled = true;
+  updateCountText();
+
+  timer = setInterval(() => {
+    coolDownNum--;
+    updateCountText();
+    if(coolDownNum <= 0){
+      clearInterval(timer);
+      timer = null;
+      sendBtn.disabled = false;
+      sendBtn.textContent = "获取邮箱授权码";
+    }
+  }, 1000);
+}
+
+function sendCodeMail(){
+  if(isSending) return;
+  if(coolDownNum > 0){
+    showToast(`请等待 ${coolDownNum} 秒后再获取`);
+    return;
+  }
+
+  const smtpPwd = smtpPwdInput.value.trim();
+  const receiveMail = receiveMailInput.value.trim();
+  
+  if(!smtpPwd){
+    showToast("请输入SMTP授权码");
+    return;
+  }
+  if(!receiveMail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(receiveMail)){
+    showToast("请输入正确的接收邮箱");
+    return;
+  }
+
+  isSending = true;
+  sendBtn.disabled = true;
+  sendBtn.textContent = "发送中...";
+
+  realCode = String(Math.floor(Math.random() * 900000) + 100000);
+  const content = `您好，您的站点访问授权码为：${realCode}\n授权码60秒内有效，请勿泄露给他人。`;
+
+  const url = `${CONFIG.emailApi}?smtp_user=${encodeURIComponent(receiveMail)}&smtp_pwd=${encodeURIComponent(smtpPwd)}&from_name=${encodeURIComponent(CONFIG.fromName)}&email=${encodeURIComponent(receiveMail)}&title=${encodeURIComponent(CONFIG.mailTitle)}&content=${encodeURIComponent(content)}`;
+
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 8000);
+
+  fetch(url, { signal: ctrl.signal })
+    .then(res => res.text())
+    .then(resText => {
+      clearTimeout(timeout);
+      if(resText.includes("success")){
+        showToast("授权码已发送，请查看邮箱");
+        startCountdown();
+      } else {
+        showToast("发送失败，请检查SMTP授权码和邮箱");
+        sendBtn.disabled = false;
+        sendBtn.textContent = "获取邮箱授权码";
+      }
+    })
+    .catch(() => {
+      clearTimeout(timeout);
+      showToast("网络异常，请检查网络后重试");
+      sendBtn.disabled = false;
+      sendBtn.textContent = "获取邮箱授权码";
+    })
+    .finally(() => {
+      isSending = false;
+    });
+}
+
+function verifyCode(){
+  const input = codeInput.value.trim();
+  if(!realCode){
+    showToast("请先点击获取授权码");
+    return;
+  }
+  if(!/^\d{6}$/.test(input)){
+    showToast("请输入6位数字授权码");
+    return;
+  }
+  if(input === realCode){
+    localStorage.setItem("siteVerifyPass", "true");
+    verifyModal.style.display = "none";
+    showToast("授权成功，永久解锁全站");
+  } else {
+    showToast("授权码错误，请核对邮箱收到的6位数字");
+  }
+}
+
+codeInput.addEventListener('keyup', e => {
+  if(e.key === 'Enter') verifyCode();
+});
+
+let touch1 = false;
+sendBtn.addEventListener('touchend', e => {
+  e.preventDefault();
+  touch1 = true;
+  sendCodeMail();
+});
+sendBtn.addEventListener('click', () => {
+  if(!touch1) sendCodeMail();
+  touch1 = false;
+});
+
+let touch2 = false;
+checkBtn.addEventListener('touchend', e => {
+  e.preventDefault();
+  touch2 = true;
+  verifyCode();
+});
+checkBtn.addEventListener('click', () => {
+  if(!touch2) verifyCode();
+  touch2 = false;
+});
+
+// ========== 电台专项修复 ==========
+const radioKw = document.getElementById('radioKeyword');
+const radioSearchBtn = document.getElementById('radioSearchBtn');
+const radioList = document.getElementById('radioResultList');
+const audioPlayer = document.getElementById('radioPlayer');
+let currentRadioEl = null;
+
+// 音频错误监听
+audioPlayer.addEventListener('error', () => {
+  showToast('该电台无法播放，请换一个试试');
+  if(currentRadioEl) currentRadioEl.classList.remove('playing');
+  currentRadioEl = null;
+});
+
+// 播放成功监听
+audioPlayer.addEventListener('playing', () => {
+  showToast('电台已开始播放');
+});
+
+// 搜索电台
+radioSearchBtn.onclick = async () => {
+  const kw = radioKw.value.trim();
+  if(!kw) return showToast("请输入电台名称");
+  radioList.innerHTML = "<div style='color:#aaa'>搜索中...</div>";
+  
+  try {
+    const res = await fetch(`https://de1.api.radio-browser.info/json/stations/search?name=${encodeURIComponent(kw)}&limit=20&is_https=true`);
+    let arr = await res.json();
+    
+    // 二次过滤：只保留https链接 + 有效直链，过滤播放列表
+    arr = arr.filter(item => {
+      const url = item.url_resolved || item.url;
+      return url && url.startsWith('https://') && !url.endsWith('.pls') && !url.endsWith('.m3u');
+    });
+
+    radioList.innerHTML = "";
+    if(!arr.length){
+      radioList.innerHTML = "<div style='color:#aaa'>无可用电台，换个关键词试试</div>";
+      return;
+    }
+
+    // 取前10个可用结果
+    arr.slice(0,10).forEach(item => {
+      const div = document.createElement("div");
+      div.className = "radio-item";
+      div.innerText = item.name;
+      const playUrl = item.url_resolved || item.url;
+      
+      div.onclick = () => {
+        if(currentRadioEl) currentRadioEl.classList.remove('playing');
+        div.classList.add('playing');
+        currentRadioEl = div;
+        
+        showToast('正在加载电台...');
+        audioPlayer.src = playUrl;
+        // 主动调用播放，兼容移动端
+        audioPlayer.play().catch(() => {
+          showToast('播放失败，请换一个电台');
+          div.classList.remove('playing');
+          currentRadioEl = null;
+        });
+      };
+      radioList.appendChild(div);
+    });
+  } catch {
+    radioList.innerHTML = "<div style='color:#aaa'>接口加载失败，请稍后再试</div>";
+  }
+};
+
+radioKw.addEventListener('keydown', e => e.key === "Enter" && radioSearchBtn.click());
+
+// ========== 页面基础功能 ==========
+const shadowTop = document.getElementById('shadowTop');
+const shadowBottom = document.getElementById('shadowBottom');
+window.addEventListener('scroll', () => {
+  const st = window.scrollY;
+  const sh = document.body.scrollHeight;
+  const ch = window.innerHeight;
+  shadowTop.style.opacity = st > 20 ? "1" : "0";
+  shadowBottom.style.opacity = (st + ch) < sh - 20 ? "1" : "0";
+});
+
+const canvas = document.getElementById('particleCanvas');
+const ctx = canvas.getContext('2d');
+let bubbles = [];
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Bubble {
+  constructor(){ this.reset(); }
+  reset(){
+    this.x = Math.random() * canvas.width;
+    this.y = canvas.height + Math.random() * 60;
+    this.size = Math.random() * 3.2 + 1.2;
+    this.sx = Math.random() * 0.4 - 0.2;
+    this.sy = -(Math.random() * 1.4 + 0.7);
+    this.alpha = Math.random() * 0.5 + 0.25;
+  }
+  update(){
+    this.x += this.sx;
+    this.y += this.sy;
+    if(this.y < -12 || this.x < -20 || this.x > canvas.width + 20) this.reset();
+  }
+  draw(){
+    ctx.strokeStyle = `rgba(60,255,136,${this.alpha})`;
+    ctx.fillStyle = `rgba(60,255,136,${this.alpha * 0.12})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+}
+function initBubbles(){
+  bubbles = [];
+  for(let i = 0; i < 100; i++) bubbles.push(new Bubble());
+}
+initBubbles();
+function loopBubble(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  bubbles.forEach(b => { b.update(); b.draw(); });
+  requestAnimationFrame(loopBubble);
+}
+loopBubble();
+
+const fireCanvas = document.getElementById('fireCanvas');
+const fireCtx = fireCanvas.getContext('2d');
+let fireList = [];
+function resizeFire(){
+  fireCanvas.width = window.innerWidth;
+  fireCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeFire);
+resizeFire();
+
+class FireDot {
+  constructor(x,y){
+    this.x = x;
+    this.y = y;
+    this.r = Math.random() * 2 + 1;
+    const ang = Math.random() * Math.PI * 2;
+    const spd = Math.random() * 4 + 2;
+    this.vx = Math.cos(ang) * spd;
+    this.vy = Math.sin(ang) * spd;
+    this.a = 1;
+    this.color = `hsl(${Math.random()*360},100%,60%)`;
+    this.dec = Math.random() * 0.015 + 0.01;
+  }
+  update(){
+    this.x += this.vx;
+    this.y += this.vy;
+    this.a -= this.dec;
+  }
+  draw(){
+    fireCtx.save();
+    fireCtx.globalAlpha = this.a;
+    fireCtx.beginPath();
+    fireCtx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    fireCtx.fillStyle = this.color;
+    fireCtx.fill();
+    fireCtx.restore();
+  }
+}
+document.addEventListener('click', e => {
+  const x = e.clientX, y = e.clientY;
+  for(let i = 0; i < 80; i++) fireList.push(new FireDot(x, y));
+});
+function loopFire(){
+  fireCtx.clearRect(0, 0, fireCanvas.width, fireCanvas.height);
+  for(let i = fireList.length - 1; i >= 0; i--){
+    const d = fireList[i];
+    d.update();
+    d.draw();
+    if(d.a <= 0) fireList.splice(i, 1);
+  }
+  requestAnimationFrame(loopFire);
+}
+loopFire();
+
+function typeWrite(el, text, delay = 80){
+  let idx = 0;
+  el.innerText = "";
+  function tick(){
+    if(idx < text.length){
+      el.innerText += text[idx];
+      idx++;
+      setTimeout(tick, delay);
+    }
+  }
+  tick();
+}
+
+const splash = document.getElementById('splashScreen');
+let splashClosed = false;
+function exitSplash(){
+  if(splashClosed) return;
+  splashClosed = true;
+  splash.classList.add('fade-out');
+  document.body.classList.add('app-ready');
+  setTimeout(() => {
+    splash.style.display = "none";
+    setTimeout(() => {
+      typeWrite(document.getElementById('profileType'), "TukA1", 100);
+      setTimeout(() => typeWrite(document.getElementById('subType'), "DIGITAL LIQUID MATRIX", 60), 600);
+      setTimeout(() => typeWrite(document.getElementById('panelType'), "🌐 VISITOR INFO", 70), 1200);
+    }, 500);
+  }, 800);
+}
+
+function updateClock(){
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  document.getElementById('hexClock').innerText = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+const startDay = new Date("2026-06-15T00:00:00");
+function runTimer(){
+  const diff = Date.now() - startDay.getTime();
+  const d = Math.floor(diff / (1000*60*60*24));
+  const h = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+  const m = Math.floor((diff % (1000*60*60)) / (1000*60));
+  const s = Math.floor((diff % (1000*60)) / 1000);
+  document.getElementById('runTimeBox').innerText = `本站已稳定运行 ${d} 天 ${h} 时 ${m} 分 ${s} 秒`;
+}
+setInterval(runTimer, 1000);
+runTimer();
+
+const quotePool = [
+  "山野万里，晚风温柔，万事皆有转机",
+  "慢下来，生活自有温柔馈赠",
+  "前路漫漫，星光永远为你而亮",
+  "风来则停，风去则行，顺其自然",
+  "保持热爱，奔赴下一场山海"
+];
+function loadQuote(){
+  const box = document.getElementById('quoteBox');
+  box.classList.remove('show');
+  box.innerText = "";
+  const txt = quotePool[Math.floor(Math.random() * quotePool.length)];
+  setTimeout(() => {
+    typeWrite(box, `「${txt}」`, 60);
+    setTimeout(() => box.classList.add('show'), 1200);
+  }, 300);
+}
+document.getElementById('refreshQuoteBtn').onclick = loadQuote;
+
+const imgBox = document.getElementById('imgResultBox');
+const imgApi = "http://ryapi.sbs/API/st.php?msg=风景";
+function setWallpaper(url){
+  const img = new Image();
+  img.src = url;
+  img.onload = () => document.body.style.backgroundImage = `url(${url})`;
+}
+function refreshWallpaper(){
+  imgBox.innerHTML = "";
+  for(let i = 0; i < 12; i++){
+    const img = new Image();
+    img.src = `${imgApi}&t=${Date.now() + i}`;
+    img.loading = "lazy";
+    img.onclick = () => setWallpaper(img.src);
+    imgBox.appendChild(img);
+  }
+}
+document.getElementById('refreshImageBtn').onclick = refreshWallpaper;
+
+const qrInput = document.getElementById('qrInput');
+const qrGenBtn = document.getElementById('qrGenBtn');
+const qrPreview = document.getElementById('qrPreview');
+qrGenBtn.onclick = () => {
+  const text = qrInput.value.trim();
+  if(!text){
+    qrPreview.innerHTML = "<span style='color:#aaa'>请输入文字/链接</span>";
+    return;
+  }
+  const api = `https://a.aa.cdn/ewm.api?c=${encodeURIComponent(text)}&s=200`;
+  qrPreview.innerHTML = `
+    <img src="${api}" style="max-width:140px;">
+    <a href="${api}" download="qrcode.png">下载二维码</a>
+  `;
+};
+
+const fileInput = document.getElementById('compressFile');
+const compressPreview = document.getElementById('compressPreview');
+fileInput.onchange = e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.src = ev.target.result;
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const max = 800;
+      if(w > max){ h = h * max / w; w = max; }
+      if(h > max){ w = w * max / h; h = max; }
+      const cvs = document.createElement("canvas");
+      cvs.width = w;
+      cvs.height = h;
+      const c = cvs.getContext("2d");
+      c.drawImage(img, 0, 0, w, h);
+      const data = cvs.toDataURL("image/jpeg", 0.6);
+      compressPreview.innerHTML = `
+        <img src="${data}" style="max-height:100px;">
+        <a href="${data}" download="compressed.jpg">下载压缩图</a>
+      `;
+    };
+  };
+  reader.readAsDataURL(file);
+};
+
+window.onload = function(){
+  exitSplash();
+  loadQuote();
+  refreshWallpaper();
+  const ua = navigator.userAgent;
+  if(/Android/.test(ua)) document.getElementById("deviceInfo").innerText = "安卓手机";
+  else if(/iPhone|iPad/.test(ua)) document.getElementById("deviceInfo").innerText = "苹果设备";
+  else document.getElementById("deviceInfo").innerText = "电脑浏览器";
+};
+
+function joinQQGroup(){
+  const qq = "671761013";
+  const ua = navigator.userAgent.toLowerCase();
+  if(/android|iphone/.test(ua)) location.href = `mqqapi://card/show_pslcard?uin=${qq}&card_type=group`;
+  else showToast("请手机端打开跳转QQ群");
+}
+</script>
+</body>
+</html>
